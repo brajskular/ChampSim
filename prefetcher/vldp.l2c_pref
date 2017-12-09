@@ -11,12 +11,12 @@ int L2_DHB_update(uint32_t cpu,uint64_t addr)
 	    curr_delta = 0;
 	    DELTA_HISTORY_BUFFER *buffer = L2_DHB[cpu];
 	    for(match = 0; match < NUM_DHB_PAGES; match++){
-	    	if((buffer[match].num_access > 0) && (buffer[match].page_num == page_num)){ //Hit
+	    	if((buffer[match].num_access > 0) && (buffer[match].page_num == page_num)){ 		//Hit
 	    		curr_delta = curr_block - buffer[match].last_addr_offset;
 	    		for(int i=3; i>0; i--)
 	    			buffer[match].last_4_deltas[i] = buffer[match].last_4_deltas[i-1];
 	    		buffer[match].last_4_deltas[0] = curr_delta;
-	    		if(buffer[match].num_access == 1)            //first hit or sec access to page
+	    		if(buffer[match].num_access == 1)            						//first hit or sec access to page
 	    			L2_OPT_update(cpu, addr, buffer[match].last_addr_offset);
 	    		else 
 	    			L2_DPT_update(cpu, addr, match);
@@ -26,14 +26,14 @@ int L2_DHB_update(uint32_t cpu,uint64_t addr)
 
 	    if(match == NUM_DHB_PAGES)
 	    	for(match=0; match<NUM_DHB_PAGES; match++)
-	    		if(buffer[match].num_access == 0){			//invalid entry
+	    		if(buffer[match].num_access == 0){								//invalid entry
 	    			buffer[match].page_num = page_num;
 	    			break;
 	    		}
 
 	    if(match == NUM_DHB_PAGES)
-	    	for(match=0; match<NUM_DHB_PAGES; match++)		//miss
-	    		if(buffer[match].mru == 0){					//evict nmru
+	    	for(match=0; match<NUM_DHB_PAGES; match++)							//miss
+	    		if(buffer[match].mru == 0){										//evict nMRU
 	    			buffer[match].page_num = page_num;
 	    			buffer[match].last_pref_dpt_level = 0;
 					buffer[match].num_access = 0;	
@@ -227,7 +227,7 @@ if(buffer[entry].last_pref_dpt_level == 3){
 buffer[entry].last_pref_dpt_level = 1;
 }
 
-int L2_DPT_check(uint32_t cpu, int *delta, uint64_t curr_block){
+int L2_DPT_check(uint32_t cpu, int *delta){
 	int i;
 	DELTA_PRED_TABLE_1 *table_1 = DPT_1[cpu];
 	DELTA_PRED_TABLE_2 *table_2 = DPT_2[cpu];
@@ -236,7 +236,7 @@ int L2_DPT_check(uint32_t cpu, int *delta, uint64_t curr_block){
 
 for(i=0; i<NUM_DPT_ENTRIES; i++)
 	if(table_3[i].deltas[0] == delta[0] &&
-		table_3[i].deltas[1] == delta[1] &&
+		table_3[i].deltas[1] == delta[1] &&											//priority given to 3-delta DPT first
 		table_3[i].deltas[2] == delta[2]){
 		L2_PF_DEBUG(printf("3_Delta = %d\n", table_3[i].pred_delta));
 		return table_3[i].pred_delta;}
@@ -294,18 +294,19 @@ void CACHE::l2c_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit
 		if(pref_block == PREF_ERROR)							//pref not found
 		return;
 		pref_addr = (curr_page << LOG2_PAGE_SIZE) | (pref_block << LOG2_BLOCK_SIZE);
-		L2_PF_DEBUG(printf("pref_block = %x, prev_block = %lx, pref_addr: %lx, prev_addr = %lx\n",pref_block,curr_block, pref_addr,addr));
+		L2_PF_DEBUG(printf("pref_block = %x, prev_block = %lx, pref_addr: %lx, prev_addr = %lx\n",
+							pref_block, curr_block, pref_addr, addr));
 		prefetch_line(ip, addr, pref_addr, FILL_L2);
 		pred_delta = pref_block - curr_block;
 	}
 	else{
-		pred_delta = L2_DPT_check( cpu, delta, curr_block);
+		pred_delta = L2_DPT_check( cpu, delta);		//DPT check
 		if(pred_delta == PREF_ERROR)							//pref not found
 		return;
 		pref_addr = ((addr >> LOG2_BLOCK_SIZE) + pred_delta) << LOG2_BLOCK_SIZE;
 		pref_block = (pref_addr >> LOG2_BLOCK_SIZE) & 0x3F;
-		L2_PF_DEBUG(printf("orig_addr = %lx\n", orig_addr));
-		L2_PF_DEBUG(printf("pref_block = %x, prev_block = %lx, pref_addr: %lx, prev_addr = %lx\n",pref_block,curr_block, pref_addr,addr));
+		L2_PF_DEBUG(printf("orig_addr = %lx\npref_block = %x, prev_block = %lx, pref_addr: %lx, prev_addr = %lx\n",
+							orig_addr, pref_block, curr_block, pref_addr, addr));
 		prefetch_line(ip, addr, pref_addr, FILL_L2);
 	}
 
@@ -315,7 +316,7 @@ void CACHE::l2c_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit
 	    buffer[dhb_entry].last_4_offsets[i] = buffer[dhb_entry].last_4_offsets[i-1];
 	buffer[dhb_entry].last_4_offsets[0] = (pref_addr >> LOG2_BLOCK_SIZE) & 0x3F;
 	for(i=3; i>0; i--)
-		delta[i] = delta[i-1];
+		delta[i] = delta[i-1];								//store pred_delta
 	delta[0] = pred_delta;
 	curr_block = pref_block;
 
@@ -330,20 +331,20 @@ if(buffer[dhb_entry].num_access > 1 && cache_hit == 1)  //if miss or first page 
 	return;
 
 for(j=0; j<3; j++){
-	pred_delta = L2_DPT_check( cpu, delta, curr_block);
+	pred_delta = L2_DPT_check( cpu, delta);
 	if(pred_delta == PREF_ERROR)							//pref not found
 	return;
 	pref_addr = ((addr >> LOG2_BLOCK_SIZE) + pred_delta) << LOG2_BLOCK_SIZE;
 	pref_block = (pref_addr >> LOG2_BLOCK_SIZE) & 0x3F;
-	L2_PF_DEBUG(printf("orig_addr = %lx\n", orig_addr));
-	L2_PF_DEBUG(printf("pref_block = %x, prev_block = %lx, pref_addr: %lx, prev_addr = %lx\n",pref_block,curr_block, pref_addr,addr));
+	L2_PF_DEBUG(printf("orig_addr = %lx\npref_block = %x, prev_block = %lx, pref_addr: %lx, prev_addr = %lx\n",
+						orig_addr, pref_block, curr_block, pref_addr, addr));
 	prefetch_line(ip, addr, pref_addr, FILL_L2);
 
 	for(i=3; i>0; i--)										//shift offsets and add latest
 	    buffer[dhb_entry].last_4_offsets[i] = buffer[dhb_entry].last_4_offsets[i-1];
 	buffer[dhb_entry].last_4_offsets[0] = (pref_addr >> LOG2_BLOCK_SIZE) & 0x3F;
 	for(i=3; i>0; i--)
-		delta[i] = delta[i-1];
+		delta[i] = delta[i-1];								//update delta array
 	delta[0] = pred_delta;
 	curr_block = pref_block;
 	addr = pref_addr;
