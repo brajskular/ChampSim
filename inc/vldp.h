@@ -113,7 +113,7 @@ extern DELTA_PRED_TABLE_3 DPT_3[NUM_CPUS][NUM_DPT_ENTRIES];
 int L2_DHB_update(uint32_t cpu,uint64_t addr);
 void L2_OPT_update(uint32_t cpu, uint64_t addr, int last_block);
 void L2_DPT_update(uint32_t cpu,uint64_t addr, int entry);
-int L2_DPT_check(uint32_t cpu, int *delta, uint64_t curr_block);
+int L2_DPT_check(uint32_t cpu, int *delta);
 uint64_t L2_OPT_check(uint32_t cpu, uint64_t addr);
 int L2_DPT_check(uint32_t cpu, int *delta, uint64_t curr_block);
 
