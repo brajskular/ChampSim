@@ -1,6 +1,6 @@
-/* This is the implemenation of the Variable Length Delta Prefetcher.
+/* This is the implemenation of the Variable Length Delta Prefetcher (VLDP).
 The functions and classes are defined at vldp.h.
-Author: Samuel Pakalapati
+Implemented by: Samuel Pakalapati
 E-mail: pakalapatisamuel@gmail.com*/
 
 #include "cache.h"
