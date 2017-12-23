@@ -3,7 +3,7 @@
 
 #include "cache.h"
 
-// L2 SPP
+// L2 VLDP
 // #define L2_PF_DEBUG_PRINT
 #ifdef L2_PF_DEBUG_PRINT
 #define L2_PF_DEBUG(x) x
