@@ -1,4 +1,4 @@
-/* This is the implemenation of the Variable Length Delta Prefetcher (VLDP).
+/* This is the implemenation of the Variable Length Delta Prefetcher.
 The functions and classes are defined at vldp.h.
 Implemented by: Samuel Pakalapati
 E-mail: pakalapatisamuel@gmail.com*/
@@ -329,31 +329,51 @@ if(buffer[dhb_entry].num_access == 1)
 if(buffer[dhb_entry].num_access > 1 && cache_hit == 1)  							// If miss or first page access fetch 3 more
 	return;
 
-for(j=0; j<3; j++){
-	pred_delta = L2_DPT_check( cpu, delta);
-	if(pred_delta == PREF_ERROR)													// If pred_delta not found, return
-	return;
-	pref_addr = ((addr >> LOG2_BLOCK_SIZE) + pred_delta) << LOG2_BLOCK_SIZE;
-	pref_block = (pref_addr >> LOG2_BLOCK_SIZE) & 0x3F;
-	L2_PF_DEBUG(printf("orig_addr = %lx\npref_block = %x, prev_block = %lx, pref_addr: %lx, prev_addr = %lx\n",
-						orig_addr, pref_block, curr_block, pref_addr, addr));
-	prefetch_line(ip, addr, pref_addr, FILL_L2);
+if(cache_hit == 0)
+	for(j=0; j<3; j++){
+		pred_delta = L2_DPT_check( cpu, delta);
+		if(pred_delta == PREF_ERROR)													// If pred_delta not found, return
+		return;
+		pref_addr = ((addr >> LOG2_BLOCK_SIZE) + pred_delta) << LOG2_BLOCK_SIZE;
+		pref_block = (pref_addr >> LOG2_BLOCK_SIZE) & 0x3F;
+		L2_PF_DEBUG(printf("orig_addr = %lx\npref_block = %x, prev_block = %lx, pref_addr: %lx, prev_addr = %lx\n",
+							orig_addr, pref_block, curr_block, pref_addr, addr));
+		prefetch_line(ip, addr, pref_addr, FILL_L2);
 
-	for(i=3; i>0; i--)																// Shift offsets and add latest
-	    buffer[dhb_entry].last_4_offsets[i] = buffer[dhb_entry].last_4_offsets[i-1];
-	buffer[dhb_entry].last_4_offsets[0] = (pref_addr >> LOG2_BLOCK_SIZE) & 0x3F;
-	for(i=3; i>0; i--)
-		delta[i] = delta[i-1];														// Update delta array
-	delta[0] = pred_delta;
-	curr_block = pref_block;														// Update curre_block
-	addr = pref_addr;																// Update addr
+		for(i=3; i>0; i--)																// Shift offsets and add latest
+		    buffer[dhb_entry].last_4_offsets[i] = buffer[dhb_entry].last_4_offsets[i-1];
+		buffer[dhb_entry].last_4_offsets[0] = (pref_addr >> LOG2_BLOCK_SIZE) & 0x3F;
+		for(i=3; i>0; i--)
+			delta[i] = delta[i-1];														// Update delta array
+		delta[0] = pred_delta;
+		curr_block = pref_block;														// Update curre_block
+		addr = pref_addr;																// Update addr
+		}
+else
+	for(j=0; j<1; j++){
+		pred_delta = L2_DPT_check( cpu, delta);
+		if(pred_delta == PREF_ERROR)													// If pred_delta not found, return
+		return;
+		pref_addr = ((addr >> LOG2_BLOCK_SIZE) + pred_delta) << LOG2_BLOCK_SIZE;
+		pref_block = (pref_addr >> LOG2_BLOCK_SIZE) & 0x3F;
+		L2_PF_DEBUG(printf("orig_addr = %lx\npref_block = %x, prev_block = %lx, pref_addr: %lx, prev_addr = %lx\n",
+							orig_addr, pref_block, curr_block, pref_addr, addr));
+		prefetch_line(ip, addr, pref_addr, FILL_L2);
+
+		for(i=3; i>0; i--)																// Shift offsets and add latest
+		    buffer[dhb_entry].last_4_offsets[i] = buffer[dhb_entry].last_4_offsets[i-1];
+		buffer[dhb_entry].last_4_offsets[0] = (pref_addr >> LOG2_BLOCK_SIZE) & 0x3F;
+		for(i=3; i>0; i--)
+			delta[i] = delta[i-1];														// Update delta array
+		delta[0] = pred_delta;
+		curr_block = pref_block;														// Update curre_block
+		addr = pref_addr;																// Update addr
+		}
 	}
-
-}
 
 void CACHE::l2c_prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr)
 {
-
+    // block[set][way].prefetch = prefetch;
 }
 
 void CACHE::l2c_prefetcher_final_stats()
