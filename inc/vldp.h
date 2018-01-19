@@ -11,6 +11,7 @@
 #define L2_PF_DEBUG(x)
 #endif
 
+#define MAX_PREFETCH_DIST 3
 #define DELTA_SIZE 8
 #define BLOCKS_PER_PAGE 64
 #define NUM_DHB_PAGES 16
@@ -20,21 +21,21 @@
 
 class DELTA_HISTORY_BUFFER {
 	public:
-		int valid,
+		uint64_t valid,
 			page_num,
 			last_addr_offset,
 			last_pref_dpt_level,
 			num_access,
 			mru,
 			// first_hit,
-			last_4_deltas[4],
 			last_4_offsets[4];
+		int last_4_deltas[4];
 
 	DELTA_HISTORY_BUFFER() {
 		valid = 0;
 		page_num = 0;
 		last_addr_offset = 0;
-		last_pref_dpt_level = 0;
+		last_pref_dpt_level = 1;
 		num_access = 0;
 		mru = 0;
 		// first_hit = 0;
@@ -46,7 +47,7 @@ class DELTA_HISTORY_BUFFER {
 
 class OFFSET_PRED_TABLE {
 	public:
-		int first_page_offset,
+		uint64_t first_page_offset,
 			pred_offset,
 			accuracy,
 			valid;
@@ -113,9 +114,10 @@ extern DELTA_PRED_TABLE_3 DPT_3[NUM_CPUS][NUM_DPT_ENTRIES];
 int L2_DHB_update(uint32_t cpu,uint64_t addr);
 void L2_OPT_update(uint32_t cpu, uint64_t addr, int last_block);
 void L2_DPT_update(uint32_t cpu,uint64_t addr, int entry);
-int L2_DPT_check(uint32_t cpu, int *delta);
+int L2_DPT_check(uint32_t cpu, int *delta, int entry);
 uint64_t L2_OPT_check(uint32_t cpu, uint64_t addr);
 int L2_DPT_check(uint32_t cpu, int *delta, uint64_t curr_block);
+void L2_promote(uint32_t cpu, int entry, int table_num);
 
 DELTA_HISTORY_BUFFER L2_DHB[NUM_CPUS][NUM_DHB_PAGES];
 OFFSET_PRED_TABLE L2_OPT[NUM_CPUS][NUM_OPT_ENTRIES];
